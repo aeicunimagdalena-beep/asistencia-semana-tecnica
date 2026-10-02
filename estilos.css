@@ -246,3 +246,89 @@ body {
 @media (min-width: 720px) {
   .kpis { grid-template-columns: repeat(4, 1fr); }
 }
+/* ============================================================
+   ADMINISTRACIÓN (Fase 8A)
+   ============================================================ */
+.chip-aviso { background: #FFF1D6; color: var(--aviso); }
+
+.btn-peligro-lleno { background: var(--error); color: #fff; }
+
+/* Modo de jornadas */
+.tarjeta-modo { border-radius: var(--radio); padding: 14px 16px; border: 1.5px solid var(--borde); background: #fff; }
+.tarjeta-modo.manual { border-color: #E8C27A; background: #FFF6E5; }
+.tarjeta-modo.auto { border-color: #9FC9D8; background: #EEF7FA; }
+.tm-etq { font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--suave); }
+.tm-valor { font-size: 22px; font-weight: 800; margin-top: 2px; }
+.tarjeta-modo.manual .tm-valor { color: var(--aviso); }
+.tarjeta-modo.auto .tm-valor { color: var(--info); }
+.tm-sub { font-size: 14px; color: var(--suave); margin-top: 2px; }
+
+/* Jornadas */
+.jornada-admin { background: #fff; border: 1.5px solid var(--borde); border-radius: var(--radio); padding: 14px 16px; margin-top: 10px; }
+.jornada-admin.en-curso { border-color: var(--exito); background: #F3FAF6; }
+.ja-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ja-nombre { font-size: 17px; font-weight: 800; }
+.ja-sub { font-size: 14px; color: var(--suave); margin-top: 2px; }
+.ja-botones { display: flex; gap: 8px; margin-top: 12px; }
+.ja-botones .btn { flex: 1; min-height: 46px; font-size: 15px; padding: 10px 12px; }
+
+/* Buscador */
+.buscador { display: flex; gap: 8px; }
+.buscador input {
+  flex: 1; min-width: 0; font-size: 17px; padding: 12px 14px; border: 1.5px solid var(--borde);
+  border-radius: 12px; background: #fff; color: var(--texto); outline: none; font-family: inherit;
+}
+.buscador input:focus { border-color: var(--tinta-2); }
+.buscador .btn { min-height: 50px; }
+.filtros { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
+.chip-boton {
+  border: 1.5px solid var(--aviso); color: var(--aviso); background: #FFF6E5;
+  border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 14px; font-family: inherit;
+}
+
+.lista-busqueda li { padding: 0; }
+.item-busqueda {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: none; border: 0; padding: 12px 2px; text-align: left; font-family: inherit; color: var(--texto); cursor: pointer;
+}
+.ib-datos { min-width: 0; }
+.ib-nombre { font-weight: 700; font-size: 16px; }
+.ib-sub { font-size: 13px; color: var(--suave); word-break: break-word; }
+
+/* Ficha del participante */
+.modal-caja.alto { max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.modal-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.det-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.det-nombre { font-size: 22px; font-weight: 800; line-height: 1.15; }
+.det-sub { color: var(--suave); font-weight: 600; margin-top: 2px; }
+.det-datos { margin: 14px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.det-datos dt { font-size: 12px; font-weight: 700; color: var(--suave); text-transform: uppercase; letter-spacing: .6px; }
+.det-datos dd { margin: 2px 0 0; font-weight: 600; word-break: break-word; }
+.enlace-boton { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.det-titulo { font-size: 16px; color: var(--tinta); margin: 18px 0 6px; }
+
+.lista-asistencia li { justify-content: flex-start; align-items: flex-start; }
+.as-marca { font-size: 20px; font-weight: 800; width: 28px; text-align: center; }
+.lista-asistencia li.si .as-marca { color: var(--exito); }
+.lista-asistencia li.no .as-marca { color: #B8BFCA; }
+.lista-asistencia li.no .as-datos { color: var(--suave); }
+.as-sub { font-size: 13px; color: var(--suave); }
+.det-acciones { margin-top: 10px; }
+
+/* Confirmación por encima de la ficha */
+.modal-confirmar { z-index: 50; align-items: center; padding: 16px; }
+.modal-confirmar .modal-caja { border-radius: 20px; max-width: 440px; }
+.conf-texto { color: var(--texto); margin: 10px 0 4px; line-height: 1.45; }
+
+/* Avisos breves */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + var(--abajo)); z-index: 60;
+  max-width: calc(100% - 32px); width: max-content; padding: 12px 16px; border-radius: 12px;
+  font-weight: 700; font-size: 15px; color: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+}
+.toast.exito { background: var(--exito); }
+.toast.error { background: var(--error); }
+
+@media (max-width: 380px) {
+  .det-datos { grid-template-columns: 1fr; }
+}
