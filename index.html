@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#14263F">
   <title>Control de Asistencia</title>
-  <link rel="stylesheet" href="estilos.css?v=8">
+  <link rel="stylesheet" href="estilos.css?v=11">
 </head>
 <body>
 
@@ -90,13 +90,17 @@
       <button class="pestana activa" data-pestana="resumen">Resumen</button>
       <button class="pestana" data-pestana="jornadas">Jornadas</button>
       <button class="pestana" data-pestana="buscar">Buscar</button>
+      <button class="pestana" data-pestana="credenciales">Credenciales</button>
+      <button class="pestana" data-pestana="reportes">Reportes</button>
     </nav>
 
     <div id="panelAviso" class="mensaje error panel-aviso" hidden></div>
 
     <div class="panel-contenido">
       <div id="secResumen" data-seccion="resumen"></div>
+
       <div id="secJornadas" data-seccion="jornadas" hidden></div>
+
       <div id="secBuscar" data-seccion="buscar" hidden>
         <div class="buscador">
           <input id="inBuscar" type="search" placeholder="Nombre, correo, documento, ID o código" autocomplete="off" enterkeyhint="search">
@@ -106,6 +110,56 @@
           <button id="btnPendientes" class="chip-boton">Pagos pendientes</button>
         </div>
         <div id="resultadosBusqueda"></div>
+      </div>
+
+      <div id="secCredenciales" data-seccion="credenciales" hidden>
+        <section class="bloque">
+          <h3>Credenciales para imprimir</h3>
+          <label class="opcion">
+            <input type="radio" name="credModo" value="activos" checked>
+            <span><b>Todos con pago verificado</b><small>Participantes en estado ACTIVO, en orden alfabético</small></span>
+          </label>
+          <label class="opcion">
+            <input type="radio" name="credModo" value="ids">
+            <span><b>Participantes seleccionados</b><small>Escribe los ID separados por comas</small></span>
+          </label>
+          <textarea id="credIds" class="area-ids" rows="3" placeholder="Ej.: EVT-001, EVT-015, 23" hidden></textarea>
+          <label class="opcion">
+            <input type="radio" name="credModo" value="todos">
+            <span><b>Todos, incluido pago pendiente</b><small>Su QR mostrará "Pago pendiente" en la entrada hasta que se verifique</small></span>
+          </label>
+          <button id="btnCredAbrir" class="btn btn-primario btn-bloque">Abrir vista de impresión</button>
+          <p class="nota">Se abre en una pestaña nueva con 8 credenciales por hoja carta. Se recomienda hacerlo desde un computador.
+            Para reemplazar la credencial de una persona usa Buscar → Generar nuevo QR, y luego imprímela con "Participantes seleccionados".</p>
+        </section>
+      </div>
+
+      <div id="secReportes" data-seccion="reportes" hidden>
+        <section class="bloque">
+          <h3>Exportar reporte</h3>
+          <label class="campo">
+            <span>Tipo de reporte</span>
+            <select id="repTipo">
+              <option value="registros">1. Asistencia completa (todos los registros)</option>
+              <option value="jornada">2. Asistencia por jornada</option>
+              <option value="individual">3. Asistencia individual</option>
+              <option value="completos">4. Personas con asistencia completa</option>
+              <option value="parciales">5. Personas con asistencia parcial</option>
+              <option value="nunca">6. Personas que nunca asistieron</option>
+              <option value="consolidado">7. Consolidado por participante</option>
+            </select>
+          </label>
+          <label class="campo" id="repCampoJornada" hidden>
+            <span>Jornada</span>
+            <select id="repJornada"></select>
+          </label>
+          <label class="campo" id="repCampoId" hidden>
+            <span>ID del participante</span>
+            <input id="repId" type="text" placeholder="Ej.: EVT-012 o 12" autocomplete="off">
+          </label>
+          <button id="btnRepGenerar" class="btn btn-primario btn-bloque">Generar vista previa</button>
+        </section>
+        <div id="repResultado"></div>
       </div>
     </div>
   </section>
@@ -179,7 +233,8 @@
 
   <!-- jsQR (Apache 2.0) -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <script src="app.js?v=8"></script>
-  <script src="admin.js?v=8"></script>
+  <script src="app.js?v=11"></script>
+  <script src="admin.js?v=11"></script>
+  <script src="reportes.js?v=11"></script>
 </body>
 </html>
