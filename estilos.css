@@ -332,3 +332,36 @@ body {
 @media (max-width: 380px) {
   .det-datos { grid-template-columns: 1fr; }
 }
+/* ============================================================
+   CREDENCIALES Y REPORTES (Fase 8B)
+   ============================================================ */
+.opcion {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 0;
+  border-top: 1px solid #EEF1F5; cursor: pointer;
+}
+.bloque h3 + .opcion { border-top: 0; }
+.opcion input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--tinta); flex: 0 0 auto; }
+.opcion b { display: block; }
+.opcion small { display: block; color: var(--suave); font-size: 13px; margin-top: 2px; }
+
+.area-ids,
+.bloque .campo select,
+.bloque .campo input {
+  width: 100%; font-size: 16px; padding: 12px; border: 1.5px solid var(--borde);
+  border-radius: 12px; background: #fff; color: var(--texto); font-family: inherit;
+}
+.area-ids { margin: 4px 0 10px; resize: vertical; }
+.bloque .campo { margin-bottom: 12px; }
+
+.tabla-envoltura {
+  overflow-x: auto; border: 1px solid var(--borde); border-radius: 10px;
+  margin-top: 8px; -webkit-overflow-scrolling: touch;
+}
+.tabla { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 560px; }
+.tabla th { background: #F3F5F8; text-align: left; padding: 8px 10px; font-weight: 700; white-space: nowrap; }
+.tabla td { padding: 7px 10px; border-top: 1px solid #EEF1F5; white-space: nowrap; }
+
+.rep-botones { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 14px; }
+@media (min-width: 560px) {
+  .rep-botones { grid-template-columns: 1fr 1fr; }
+}
