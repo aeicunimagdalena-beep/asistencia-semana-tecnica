@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#14263F">
+  <title>Control de Asistencia</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+  <!-- Cargando -->
+  <div id="vistaCarga" class="vista vista-centro">
+    <div class="spinner"></div>
+    <p>Conectando…</p>
+  </div>
+
+  <!-- Ingreso -->
+  <section id="vistaIngreso" class="vista" hidden>
+    <div class="ingreso">
+      <div class="marca">
+        <div class="marca-sup">Control de asistencia</div>
+        <h1>XXIII Semana Técnica de Ingeniería Civil</h1>
+      </div>
+      <label class="campo">
+        <span>Nombre de este dispositivo</span>
+        <input id="inDispositivo" type="text" maxlength="40" placeholder="Ej.: Celular 1 – Entrada" autocomplete="off">
+      </label>
+      <label class="campo">
+        <span>PIN de acceso</span>
+        <input id="inPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="••••••">
+      </label>
+      <div id="ingresoMensaje" class="mensaje" hidden></div>
+      <button id="btnIngresar" class="btn btn-primario btn-grande">Ingresar</button>
+    </div>
+  </section>
+
+  <!-- Escáner -->
+  <section id="vistaEscaner" class="vista" hidden>
+    <header class="barra">
+      <div class="barra-titulo">
+        <div class="barra-sup">Control de asistencia</div>
+        <div id="barraEvento" class="barra-evento"></div>
+      </div>
+      <button id="btnMenu" class="btn-icono" aria-label="Opciones">⋯</button>
+    </header>
+
+    <div id="jornada" class="jornada">
+      <div class="jornada-etq">Jornada actual</div>
+      <div id="jornadaTexto" class="jornada-texto">Consultando…</div>
+      <div id="jornadaSub" class="jornada-sub"></div>
+    </div>
+
+    <div id="modoPrueba" class="aviso-prueba" hidden>MODO VERIFICACIÓN · no se registra asistencia</div>
+
+    <div class="visor">
+      <video id="video" playsinline muted autoplay></video>
+      <div class="marco"></div>
+      <div id="visorMensaje" class="visor-mensaje" hidden>
+        <p id="visorTexto"></p>
+        <button id="btnCamara" class="btn btn-primario">Activar cámara</button>
+      </div>
+    </div>
+
+    <p class="indicacion">Apunta la cámara al código QR</p>
+
+    <div class="acciones">
+      <button id="btnCodigo" class="btn btn-secundario btn-grande">Ingresar código</button>
+    </div>
+
+    <div class="pie">
+      <span id="contador"></span>
+      <button id="btnSonido" class="btn-texto">🔊 Sonido</button>
+    </div>
+  </section>
+
+  <!-- Resultado del escaneo -->
+  <div id="resultado" class="resultado" hidden>
+    <div id="resIcono" class="resultado-icono"></div>
+    <div id="resTitulo" class="resultado-titulo"></div>
+    <div id="resNombre" class="resultado-nombre"></div>
+    <div id="resDetalle" class="resultado-detalle"></div>
+    <div id="resHora" class="resultado-hora"></div>
+  </div>
+
+  <!-- Procesando -->
+  <div id="procesando" class="procesando" hidden>
+    <div class="spinner"></div>
+    <p>Verificando…</p>
+  </div>
+
+  <!-- Ingresar código -->
+  <div id="modalCodigo" class="modal" hidden>
+    <div class="modal-caja">
+      <h2>Ingresar código</h2>
+      <p class="modal-ayuda">Código de asistencia de 6 dígitos</p>
+      <input id="inCodigo" class="input-codigo" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">
+      <div id="codigoMensaje" class="mensaje" hidden></div>
+      <div class="modal-botones">
+        <button id="btnCodigoCancelar" class="btn btn-secundario">Cancelar</button>
+        <button id="btnCodigoEnviar" class="btn btn-primario">Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opciones -->
+  <div id="modalMenu" class="modal" hidden>
+    <div class="modal-caja">
+      <h2>Opciones</h2>
+      <p id="menuInfo" class="modal-ayuda"></p>
+      <button id="btnActualizar" class="btn btn-secundario btn-bloque">Actualizar jornada</button>
+      <button id="btnSalir" class="btn btn-peligro btn-bloque">Cerrar sesión</button>
+      <button id="btnMenuCerrar" class="btn-texto btn-bloque">Volver</button>
+    </div>
+  </div>
+
+  <!-- jsQR (Apache 2.0) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
