@@ -164,3 +164,85 @@ body {
   .modal { align-items: center; }
   .modal-caja { border-radius: 20px; }
 }
+/* ============================================================
+   PANEL DE ADMINISTRACIÓN (Fase 7)
+   ============================================================ */
+.vista-panel { max-width: 980px; }
+
+.pestanas {
+  display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px 0;
+  scrollbar-width: none;
+}
+.pestanas::-webkit-scrollbar { display: none; }
+.pestana {
+  flex: 0 0 auto; border: 1.5px solid var(--borde); background: #fff; color: var(--suave);
+  border-radius: 999px; padding: 9px 16px; font-weight: 700; font-size: 15px; font-family: inherit;
+}
+.pestana.activa { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+
+.panel-aviso { margin: 10px 16px 0; }
+.panel-contenido { padding: 12px 16px calc(24px + var(--abajo)); }
+
+.cargando { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 0; color: var(--suave); font-weight: 600; }
+
+.btn-icono.girando { animation: giro .9s linear infinite; }
+
+/* Jornada en curso */
+.tarjeta-jornada { border-radius: var(--radio); padding: 14px 16px; border: 1.5px solid var(--borde); background: #fff; }
+.tarjeta-jornada.activa { border-color: var(--exito); background: #E8F5EE; }
+.tarjeta-jornada.inactiva { border-color: #E8C27A; background: #FFF6E5; }
+.tj-etq { font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--suave); }
+.tj-valor { font-size: 22px; font-weight: 800; margin-top: 2px; }
+.tarjeta-jornada.activa .tj-valor { color: var(--exito); }
+.tarjeta-jornada.inactiva .tj-valor { color: var(--aviso); }
+.tj-sub { font-size: 14px; color: var(--suave); margin-top: 2px; }
+
+/* Indicadores */
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.kpi { background: #fff; border: 1.5px solid var(--borde); border-radius: var(--radio); padding: 14px; }
+.kpi-valor { font-size: 34px; font-weight: 800; line-height: 1.05; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.kpi-titulo { font-size: 14px; font-weight: 700; margin-top: 4px; }
+.kpi-sub { font-size: 13px; color: var(--suave); }
+.kpi-exito .kpi-valor { color: var(--exito); }
+.kpi-info .kpi-valor { color: var(--info); }
+.kpi-aviso .kpi-valor { color: var(--aviso); }
+
+.nota { color: var(--suave); font-size: 14px; margin: 12px 2px 0; }
+
+/* Bloques */
+.bloque { background: #fff; border: 1.5px solid var(--borde); border-radius: var(--radio); padding: 14px 16px; margin-top: 14px; }
+.bloque h3 { margin: 0 0 10px; font-size: 16px; color: var(--tinta); }
+.vacio { color: var(--suave); margin: 4px 0; font-size: 15px; }
+
+/* Asistencia por jornada */
+.fila-jornada { padding: 10px 0; border-top: 1px solid #EEF1F5; }
+.fila-jornada:first-of-type { border-top: 0; padding-top: 0; }
+.fj-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.fj-nombre { font-weight: 700; }
+.fila-jornada.en-curso .fj-nombre { color: var(--exito); }
+.fj-barra { height: 10px; background: #EEF1F5; border-radius: 999px; overflow: hidden; margin: 8px 0 6px; }
+.fj-relleno { height: 100%; background: var(--tinta-2); border-radius: 999px; }
+.fila-jornada.en-curso .fj-relleno { background: var(--exito); }
+.fj-pie { display: flex; justify-content: space-between; font-size: 14px; color: var(--suave); font-variant-numeric: tabular-nums; }
+
+.chip { font-size: 11px; font-weight: 800; letter-spacing: .6px; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.chip-exito { background: #E8F5EE; color: var(--exito); }
+.chip-info { background: #E3F1F6; color: var(--info); }
+.chip-gris { background: #EEF1F5; color: var(--suave); }
+
+/* Listas */
+.lista { list-style: none; margin: 0; padding: 0; }
+.lista li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #EEF1F5; }
+.lista li:first-child { border-top: 0; }
+.lista-registros li { justify-content: flex-start; align-items: flex-start; }
+.lr-hora { font-weight: 800; font-variant-numeric: tabular-nums; min-width: 74px; }
+.lr-hora span { display: block; font-size: 12px; font-weight: 600; color: var(--suave); }
+.lr-datos { min-width: 0; }
+.lr-nombre { font-weight: 700; }
+.lr-sub { font-size: 13px; color: var(--suave); word-break: break-word; }
+
+.actualizado { text-align: center; color: var(--suave); font-size: 13px; margin: 16px 0 0; }
+
+@media (min-width: 720px) {
+  .kpis { grid-template-columns: repeat(4, 1fr); }
+}
