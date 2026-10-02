@@ -1,0 +1,13 @@
+{
+  "name": "Asistencia · XXIII Semana Técnica",
+  "short_name": "Asistencia",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14263F",
+  "theme_color": "#14263F",
+  "icons": [
+    { "src": "icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
