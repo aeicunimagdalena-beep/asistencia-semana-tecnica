@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#14263F">
   <title>Control de Asistencia</title>
-  <link rel="stylesheet" href="estilos.css?v=6">
+  <link rel="stylesheet" href="estilos.css?v=7">
 </head>
 <body>
 
@@ -75,6 +75,28 @@
     </div>
   </section>
 
+  <!-- Panel de administración -->
+  <section id="vistaPanel" class="vista vista-panel" hidden>
+    <header class="barra">
+      <button id="btnVolverEscaner" class="btn-icono" aria-label="Volver al escáner">←</button>
+      <div class="barra-titulo">
+        <div class="barra-sup">Panel de administración</div>
+        <div id="panelEvento" class="barra-evento"></div>
+      </div>
+      <button id="btnPanelActualizar" class="btn-icono" aria-label="Actualizar">↻</button>
+    </header>
+
+    <nav class="pestanas">
+      <button class="pestana activa" data-pestana="resumen">Resumen</button>
+    </nav>
+
+    <div id="panelAviso" class="mensaje error panel-aviso" hidden></div>
+
+    <div class="panel-contenido">
+      <div id="secResumen" data-seccion="resumen"></div>
+    </div>
+  </section>
+
   <!-- Resultado del escaneo -->
   <div id="resultado" class="resultado" hidden>
     <div id="resIcono" class="resultado-icono"></div>
@@ -87,7 +109,7 @@
   <!-- Procesando -->
   <div id="procesando" class="procesando" hidden>
     <div class="spinner"></div>
-    <p>Verificando…</p>
+    <p>Registrando…</p>
   </div>
 
   <!-- Ingresar código -->
@@ -109,6 +131,7 @@
     <div class="modal-caja">
       <h2>Opciones</h2>
       <p id="menuInfo" class="modal-ayuda"></p>
+      <button id="btnPanel" class="btn btn-primario btn-bloque" hidden>Panel de administración</button>
       <button id="btnActualizar" class="btn btn-secundario btn-bloque">Actualizar jornada</button>
       <button id="btnSalir" class="btn btn-peligro btn-bloque">Cerrar sesión</button>
       <button id="btnMenuCerrar" class="btn-texto btn-bloque">Volver</button>
@@ -117,6 +140,7 @@
 
   <!-- jsQR (Apache 2.0) -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
+  <script src="admin.js?v=7"></script>
 </body>
 </html>
