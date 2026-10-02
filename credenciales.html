@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Credenciales — vista de impresión</title>
+  <style>
+    @page { size: letter; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #EEF1F5; color: #152033; font-family: Arial, Helvetica, sans-serif; }
+
+    .barra-imp {
+      position: sticky; top: 0; z-index: 5; background: #14263F; color: #fff;
+      padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    }
+    .barra-imp .info { flex: 1; min-width: 200px; font-weight: 600; }
+    .barra-imp .info small { display: block; font-weight: 400; opacity: .8; margin-top: 2px; }
+    .barra-imp button {
+      background: #fff; color: #14263F; border: 0; border-radius: 10px;
+      padding: 10px 16px; font-weight: 700; font-size: 15px; cursor: pointer;
+    }
+    .estado {
+      max-width: 620px; margin: 40px auto; padding: 22px; background: #fff;
+      border-radius: 12px; text-align: center; line-height: 1.5;
+    }
+    .estado.error { color: #9B1C1C; }
+    .contenedor { overflow-x: auto; padding: 12px 0; }
+
+    /* Hoja carta: 215,9 mm − 20 mm de márgenes = 195,9 mm útiles */
+    .hoja {
+      display: grid; grid-template-columns: repeat(2, 95mm); grid-auto-rows: 62mm;
+      gap: 3.5mm 5.9mm; background: #fff;
+    }
+    .cred {
+      border: 0.3mm dashed #9AA3B0; padding: 4mm; display: flex; gap: 4mm;
+      align-items: center; overflow: hidden; break-inside: avoid;
+    }
+    .cred-qr { width: 38mm; height: 38mm; flex: 0 0 38mm; }
+    .cred-qr svg { width: 100%; height: 100%; display: block; }
+    .cred-datos { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+    .cred-evento { font-size: 7.5pt; font-weight: 700; color: #1F3A5F; text-transform: uppercase; letter-spacing: .3pt; line-height: 1.2; }
+    .cred-lema { font-size: 6.5pt; color: #5B6678; font-style: italic; margin-top: .5mm; }
+    .cred-nombre { font-size: 12pt; font-weight: 800; line-height: 1.15; word-break: break-word; }
+    .cred-nombre.largo { font-size: 10pt; }
+    .cred-id { font-size: 9pt; color: #5B6678; margin-top: 1mm; }
+    .cred-cod-et { font-size: 6.5pt; text-transform: uppercase; letter-spacing: .4pt; color: #5B6678; }
+    .cred-cod { font-size: 17pt; font-weight: 800; letter-spacing: 1.5mm; color: #14263F; }
+    .cred-pie { font-size: 6.5pt; color: #5B6678; }
+
+    @media screen {
+      .hoja { width: 215.9mm; padding: 10mm; margin: 0 auto 12px; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+    }
+    @media print {
+      body { background: #fff; }
+      .barra-imp, .estado { display: none !important; }
+      .contenedor { overflow: visible; padding: 0; }
+      .hoja { margin: 0; page-break-after: always; break-after: page; }
+      .hoja:last-child { page-break-after: auto; break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="barra-imp" id="barra" hidden>
+    <div class="info"><span id="resumen"></span><small id="aviso"></small></div>
+    <button onclick="window.print()">Imprimir / Guardar PDF</button>
+    <button onclick="window.close()">Cerrar</button>
+  </div>
+
+  <div id="estado" class="estado">Cargando credenciales…</div>
+  <div class="contenedor"><div id="hojas"></div></div>
+
+  <!-- qrcode-generator (MIT) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // ▼▼▼ La misma URL /exec que está en app.js ▼▼▼
+    var API_URL = 'https://script.google.com/macros/s/AKfycbwZVGNaEQ2-0Wbp7umi8O6niq4VS7rxmOLn2Gw95kd6t211WkjJc4vPGP2snJXwCpOr6Q/exec';
+    // ▲▲▲
+
+    var POR_HOJA = 8;
+    var PREFIJO_QR = 'EVT1:';
+
+    function $(id) { return document.getElementById(id); }
+    function esc(t) {
+      return String(t == null ? '' : t)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function estado(texto, error) {
+      var el = $('estado');
+      el.textContent = texto;
+      el.className = 'estado' + (error ? ' error' : '');
+      el.hidden = false;
+    }
+    function parametro(nombre) {
+      var partes = location.hash.replace(/^#/, '').split('&');
+      for (var i = 0; i < partes.length; i++) {
+        var kv = partes[i].split('=');
+        if (kv[0] === nombre) {
+          try { return decodeURIComponent(kv[1] || ''); } catch (e) { return ''; }
+        }
+      }
+      return '';
+    }
+
+    var sesion = null;
+    try { sesion = localStorage.getItem('asis.sesion'); } catch (e) {}
+
+    if (API_URL.indexOf('https://script.google.com/') !== 0) {
+      estado('Falta configurar la dirección del servidor (API_URL) en credenciales.html.', true);
+      return;
+    }
+    if (!sesion) {
+      estado('Primero ingresa al sistema con el PIN de administrador en este mismo navegador y vuelve a abrir esta vista desde el panel.', true);
+      return;
+    }
+    if (typeof qrcode !== 'function') {
+      estado('No se pudo cargar el generador de QR. Revisa la conexión y recarga la página.', true);
+      return;
+    }
+
+    var modo = parametro('modo') || 'activos';
+    var cuerpo = { accion: 'credenciales', sesion: sesion, modo: modo, ids: parametro('ids') };
+
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(cuerpo),
+      redirect: 'follow'
+    }).then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res.ok) {
+          estado(res.codigo === 'SESION'
+            ? 'Tu sesión expiró. Ingresa de nuevo con el PIN de administrador y vuelve a abrir esta vista.'
+            : (res.error || 'No se pudieron obtener las credenciales.'), true);
+          return;
+        }
+        pintar(res.datos);
+      })
+      .catch(function () {
+        estado('Sin conexión con el servidor. Revisa la conexión a internet y recarga la página.', true);
+      });
+
+    function tarjeta(c, evento) {
+      var qr = qrcode(0, 'M');
+      qr.addData(PREFIJO_QR + c.token);
+      qr.make();
+      var largo = c.nombre.length > 32 ? ' largo' : '';
+      return '<div class="cred">' +
+        '<div class="cred-qr">' + qr.createSvgTag(4, 2) + '</div>' +
+        '<div class="cred-datos">' +
+          '<div>' +
+            '<div class="cred-evento">' + esc(evento.nombre) + '</div>' +
+            (evento.lema ? '<div class="cred-lema">' + esc(evento.lema) + '</div>' : '') +
+          '</div>' +
+          '<div>' +
+            '<div class="cred-nombre' + largo + '">' + esc(c.nombre) + '</div>' +
+            '<div class="cred-id">ID ' + esc(c.id) + '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="cred-cod-et">Código de asistencia</div>' +
+            '<div class="cred-cod">' + esc(c.codigo) + '</div>' +
+          '</div>' +
+          '<div class="cred-pie">Presenta este código en cada jornada · Personal e intransferible</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function pintar(d) {
+      if (!d.credenciales.length) {
+        estado('No hay participantes para esta selección.' +
+          (d.noEncontrados.length ? ' ID no encontrados: ' + d.noEncontrados.join(', ') : ''), true);
+        return;
+      }
+      var html = [];
+      for (var i = 0; i < d.credenciales.length; i += POR_HOJA) {
+        html.push('<div class="hoja">' +
+          d.credenciales.slice(i, i + POR_HOJA).map(function (c) { return tarjeta(c, d.evento); }).join('') +
+          '</div>');
+      }
+      $('hojas').innerHTML = html.join('');
+      $('estado').hidden = true;
+
+      var hojas = Math.ceil(d.credenciales.length / POR_HOJA);
+      $('resumen').textContent = d.credenciales.length + ' credencial(es) · ' + hojas + ' hoja(s) tamaño carta';
+      $('aviso').textContent = d.noEncontrados.length
+        ? 'ID no encontrados: ' + d.noEncontrados.join(', ')
+        : 'En la ventana de impresión: tamaño Carta, escala 100 %, sin encabezados ni pies de página.';
+      $('barra').hidden = false;
+    }
+  })();
+  </script>
+</body>
+</html>
