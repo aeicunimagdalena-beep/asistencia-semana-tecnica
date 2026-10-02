@@ -9,7 +9,7 @@
   var API_URL = 'https://script.google.com/macros/s/AKfycbwZVGNaEQ2-0Wbp7umi8O6niq4VS7rxmOLn2Gw95kd6t211WkjJc4vPGP2snJXwCpOr6Q/exec';
 
   // Fase 5: 'identificar' (solo verifica). Fase 6: cambiar a 'registrar'.
-  var ACCION_ESCANEO = 'identificar';
+  var ACCION_ESCANEO = 'registrar';   var PLATAFORMA = /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iOS' : (/Android/.test(navigator.userAgent) ? 'Android' : 'Escritorio');
 
   var PREFIJO_QR = 'EVT1:';
   var TIMEOUT_MS = 15000;          // espera máxima por respuesta del servidor
@@ -343,6 +343,7 @@
     if (st.ocupado) return;
     st.ocupado = true;
     $('procesando').hidden = false;
+        datos.plataforma = PLATAFORMA;
 
     api(ACCION_ESCANEO, datos).then(function (r) {
       $('procesando').hidden = true;
