@@ -1,6 +1,6 @@
 /* ============================================================
  *  Control de Asistencia — app.js
- *  Fase 5: escáner en MODO VERIFICACIÓN (no registra asistencia)
+ *  Escáner + ingreso + navegación al panel de administración
  * ============================================================ */
 (function () {
   'use strict';
@@ -8,13 +8,14 @@
   /* ===== Configuración ===== */
   var API_URL = 'https://script.google.com/macros/s/AKfycbwZVGNaEQ2-0Wbp7umi8O6niq4VS7rxmOLn2Gw95kd6t211WkjJc4vPGP2snJXwCpOr6Q/exec';
 
-  // Fase 5: 'identificar' (solo verifica). Fase 6: cambiar a 'registrar'.
-  var ACCION_ESCANEO = 'registrar';   var PLATAFORMA = /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iOS' : (/Android/.test(navigator.userAgent) ? 'Android' : 'Escritorio');
+  var ACCION_ESCANEO = 'registrar';
+  var PLATAFORMA = /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iOS'
+    : (/Android/.test(navigator.userAgent) ? 'Android' : 'Escritorio');
 
   var PREFIJO_QR = 'EVT1:';
-  var TIMEOUT_MS = 15000;          // espera máxima por respuesta del servidor
-  var INTERVALO_ESTADO_MS = 30000; // cada cuánto se consulta la jornada
-  var PAUSA_MISMO_QR_MS = 3000;    // tras un resultado, ignora el mismo QR este tiempo
+  var TIMEOUT_MS = 15000;
+  var INTERVALO_ESTADO_MS = 30000;
+  var PAUSA_MISMO_QR_MS = 3000;
 
   var LS = {
     sesion: 'asis.sesion',
@@ -23,12 +24,14 @@
     contador: 'asis.contador'
   };
 
+  var VISTAS = ['vistaCarga', 'vistaIngreso', 'vistaEscaner', 'vistaPanel'];
+
   var $ = function (id) { return document.getElementById(id); };
 
   var st = {
     sesion: null, rol: null, dispositivo: '',
     jornada: null, proxima: null,
-    ocupado: false, modal: false,
+    ocupado: false, modal: false, enPanel: false,
     camara: false, stream: null, reanudar: false,
     ultimo: '', ultimoT: 0,
     sonido: true, audio: null, wake: null,
@@ -56,9 +59,10 @@
   function guardar(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function borrar(k) { try { localStorage.removeItem(k); } catch (e) {} }
 
-  /* ===== Vistas y mensajes ===== */
+  /* ===== Utilidades de interfaz ===== */
   function mostrarVista(id) {
-    ['vistaCarga', 'vistaIngreso', 'vistaEscaner'].forEach(function (v) { $(v).hidden = (v !== id); });
+    VISTAS.forEach(function (v) { $(v).hidden = (v !== id); });
+    window.scrollTo(0, 0);
   }
 
   function mensaje(id, tipo, texto) {
@@ -77,6 +81,12 @@
     if (boton) b.textContent = boton;
     st.accionVisor = accion || null;
     $('visorMensaje').hidden = false;
+  }
+
+  function esc(t) {
+    return String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   /* ===== Comunicación con el servidor ===== */
@@ -187,11 +197,14 @@
     st.dispositivo = d.dispositivo;
     if (d.evento && d.evento.nombre) {
       $('barraEvento').textContent = d.evento.nombre;
+      $('panelEvento').textContent = d.evento.nombre;
       document.title = 'Asistencia — ' + d.evento.nombre;
     }
     $('menuInfo').textContent = 'Dispositivo: ' + d.dispositivo + ' · ' +
       (d.rol === 'ADMIN' ? 'Administrador' : 'Operador');
+    $('btnPanel').hidden = d.rol !== 'ADMIN';
 
+    st.enPanel = false;
     mostrarVista('vistaEscaner');
     actualizarEstado();
     clearInterval(st.intervalo);
@@ -202,8 +215,11 @@
   }
 
   function salir(msg) {
+    if (window.Asistencia.panel) window.Asistencia.panel.detener();
     borrar(LS.sesion);
     st.sesion = null;
+    st.rol = null;
+    st.enPanel = false;
     clearInterval(st.intervalo);
     detenerCamara();
     cerrarResultado();
@@ -213,6 +229,19 @@
     st.modal = false;
     mostrarVista('vistaIngreso');
     if (msg) mensaje('ingresoMensaje', 'info', msg);
+  }
+
+  /* ===== Navegación escáner ↔ panel ===== */
+  function pausarEscaner() {
+    st.enPanel = true;
+    detenerCamara();
+  }
+
+  function reanudarEscaner() {
+    st.enPanel = false;
+    mostrarVista('vistaEscaner');
+    actualizarEstado();
+    iniciarCamara();
   }
 
   /* ===== Jornada ===== */
@@ -259,7 +288,7 @@
 
   function iniciarCamara() {
     prepararAudio();
-    if (st.camara) return;
+    if (st.camara || st.enPanel) return;
 
     if (typeof jsQR !== 'function') {
       visor('No se pudo cargar el lector de QR. Revisa la conexión y recarga la página.', 'Recargar',
@@ -276,15 +305,16 @@
       audio: false,
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
     }).then(function (s) {
+      if (st.enPanel) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
       st.stream = s;
       var v = $('video');
       v.srcObject = s;
-      return v.play();
-    }).then(function () {
-      st.camara = true;
-      visor(null);
-      mantenerPantalla();
-      bucle();
+      return v.play().then(function () {
+        st.camara = true;
+        visor(null);
+        mantenerPantalla();
+        bucle();
+      });
     }).catch(function (e) {
       detenerCamara();
       visor(textoErrorCamara(e), 'Reintentar');
@@ -303,9 +333,9 @@
     if (!st.camara) return;
     var v = $('video');
     if (!st.ocupado && !st.modal && v.readyState >= 2 && v.videoWidth) {
-      var esc = Math.min(1, 640 / v.videoWidth);
-      var w = Math.round(v.videoWidth * esc);
-      var h = Math.round(v.videoHeight * esc);
+      var esc2 = Math.min(1, 640 / v.videoWidth);
+      var w = Math.round(v.videoWidth * esc2);
+      var h = Math.round(v.videoHeight * esc2);
       if (lienzo.width !== w || lienzo.height !== h) { lienzo.width = w; lienzo.height = h; }
       ctx.drawImage(v, 0, 0, w, h);
       var c = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
@@ -333,7 +363,7 @@
     st.ultimoT = ahora;
 
     if (texto.indexOf(PREFIJO_QR) !== 0) {
-      resultado({ estado: 'QR_AJENO' }); // se descarta sin consultar al servidor
+      resultado({ estado: 'QR_AJENO' });
       return;
     }
     procesar({ qr: texto });
@@ -343,7 +373,7 @@
     if (st.ocupado) return;
     st.ocupado = true;
     $('procesando').hidden = false;
-        datos.plataforma = PLATAFORMA;
+    datos.plataforma = PLATAFORMA;
 
     api(ACCION_ESCANEO, datos).then(function (r) {
       $('procesando').hidden = true;
@@ -508,6 +538,10 @@
     $('btnSalir').addEventListener('click', function () {
       if (confirm('¿Cerrar la sesión en este dispositivo?')) { cerrarMenu(); salir('Sesión cerrada.'); }
     });
+    $('btnPanel').addEventListener('click', function () {
+      cerrarMenu();
+      if (window.Asistencia.panel) window.Asistencia.panel.abrir();
+    });
 
     $('btnSonido').addEventListener('click', function () {
       st.sonido = !st.sonido;
@@ -529,6 +563,19 @@
       }
     });
   }
+
+  /* ===== Funciones compartidas con admin.js ===== */
+  window.Asistencia = {
+    api: api,
+    $: $,
+    esc: esc,
+    mostrarVista: mostrarVista,
+    salir: salir,
+    pausarEscaner: pausarEscaner,
+    reanudarEscaner: reanudarEscaner,
+    rol: function () { return st.rol; },
+    panel: null // lo registra admin.js
+  };
 
   iniciar();
 })();
