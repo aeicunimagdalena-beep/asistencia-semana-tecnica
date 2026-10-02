@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#14263F">
   <title>Control de Asistencia</title>
-  <link rel="stylesheet" href="estilos.css?v=7">
+  <link rel="stylesheet" href="estilos.css?v=8">
 </head>
 <body>
 
@@ -88,12 +88,25 @@
 
     <nav class="pestanas">
       <button class="pestana activa" data-pestana="resumen">Resumen</button>
+      <button class="pestana" data-pestana="jornadas">Jornadas</button>
+      <button class="pestana" data-pestana="buscar">Buscar</button>
     </nav>
 
     <div id="panelAviso" class="mensaje error panel-aviso" hidden></div>
 
     <div class="panel-contenido">
       <div id="secResumen" data-seccion="resumen"></div>
+      <div id="secJornadas" data-seccion="jornadas" hidden></div>
+      <div id="secBuscar" data-seccion="buscar" hidden>
+        <div class="buscador">
+          <input id="inBuscar" type="search" placeholder="Nombre, correo, documento, ID o código" autocomplete="off" enterkeyhint="search">
+          <button id="btnBuscar" class="btn btn-primario">Buscar</button>
+        </div>
+        <div class="filtros">
+          <button id="btnPendientes" class="chip-boton">Pagos pendientes</button>
+        </div>
+        <div id="resultadosBusqueda"></div>
+      </div>
     </div>
   </section>
 
@@ -138,9 +151,35 @@
     </div>
   </div>
 
+  <!-- Ficha del participante -->
+  <div id="modalDetalle" class="modal" hidden>
+    <div class="modal-caja alto">
+      <div class="modal-cab">
+        <h2>Participante</h2>
+        <button id="btnDetalleCerrar" class="btn-texto">Cerrar ✕</button>
+      </div>
+      <div id="detalleContenido"></div>
+    </div>
+  </div>
+
+  <!-- Confirmación -->
+  <div id="modalConfirmar" class="modal modal-confirmar" hidden>
+    <div class="modal-caja">
+      <h2 id="confTitulo"></h2>
+      <p id="confTexto" class="conf-texto"></p>
+      <div class="modal-botones">
+        <button id="confCancelar" class="btn btn-secundario">Cancelar</button>
+        <button id="confAceptar" class="btn btn-primario">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Avisos breves -->
+  <div id="panelToast" class="toast" hidden></div>
+
   <!-- jsQR (Apache 2.0) -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <script src="app.js?v=7"></script>
-  <script src="admin.js?v=7"></script>
+  <script src="app.js?v=8"></script>
+  <script src="admin.js?v=8"></script>
 </body>
 </html>
