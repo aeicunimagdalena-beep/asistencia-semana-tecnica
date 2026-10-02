@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Mi credencial — XXIII Semana Técnica de Ingeniería Civil</title>
+  <style>
+    :root { --azul: #14263F; --gris: #5B6678; --borde: #D9DEE6; --fondo: #EEF1F5; --rojo: #B42318; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--fondo); color: #152033; line-height: 1.4;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    main { max-width: 420px; margin: 0 auto; padding: 16px; }
+    .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 16px; overflow: hidden; }
+    .cabecera { background: var(--azul); color: #fff; padding: 18px 20px; text-align: center; }
+    .evento { font-size: 18px; font-weight: 700; }
+    .lema { font-size: 13px; opacity: .85; margin-top: 4px; font-style: italic; }
+    .cuerpo { padding: 22px 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; color: var(--azul); }
+    .ayuda { color: var(--gris); font-size: 14px; margin: 0 0 18px; }
+    label { display: block; font-weight: 600; font-size: 14px; color: var(--gris); margin-bottom: 14px; }
+    input { display: block; width: 100%; margin-top: 6px; font-size: 18px; padding: 13px 14px;
+      border: 1.5px solid var(--borde); border-radius: 12px; font-family: inherit; }
+    input:focus { outline: none; border-color: var(--azul); }
+    #inCodigo { letter-spacing: 6px; font-weight: 700; }
+    button { width: 100%; min-height: 54px; border: 0; border-radius: 12px; background: var(--azul);
+      color: #fff; font-size: 17px; font-weight: 700; font-family: inherit; cursor: pointer; }
+    button:disabled { opacity: .6; }
+    .error { background: #FBE4E2; color: var(--rojo); border-radius: 10px; padding: 12px 14px;
+      font-weight: 600; font-size: 15px; margin-bottom: 14px; }
+    .nota { color: var(--gris); font-size: 13px; margin: 16px 2px 0; text-align: center; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="tarjeta">
+    <div class="cabecera">
+      <div class="evento">XXIII Semana Técnica de Ingeniería Civil</div>
+      <div class="lema">“Construyendo el futuro desde nuestras raíces”</div>
+    </div>
+    <div class="cuerpo">
+      <h1>Mi credencial</h1>
+      <p class="ayuda">Escribe tu número de documento y el código de asistencia de 6 dígitos que llegó a tu correo.</p>
+      <div id="error" class="error" hidden></div>
+      <label>Número de documento
+        <input id="inDocumento" type="text" inputmode="numeric" autocomplete="off" maxlength="15">
+      </label>
+      <label>Código de asistencia
+        <input id="inCodigo" type="text" inputmode="numeric" autocomplete="off" maxlength="6">
+      </label>
+      <button id="btnVer">Ver mi código QR</button>
+    </div>
+  </div>
+  <p class="nota">¿No recibiste tu código? Revisa la carpeta de correo no deseado o comunícate con el comité organizador.</p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // ▼▼▼ La misma URL /exec que está en app.js ▼▼▼
+  var API_URL = 'PEGA_AQUI_LA_URL_EXEC';
+  // ▲▲▲
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function error(texto) {
+    $('error').textContent = texto || '';
+    $('error').hidden = !texto;
+  }
+
+  $('inDocumento').addEventListener('input', function () { this.value = this.value.replace(/\D/g, ''); });
+  $('inCodigo').addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 6); });
+  $('inCodigo').addEventListener('keydown', function (e) { if (e.key === 'Enter') ver(); });
+  $('btnVer').addEventListener('click', ver);
+
+  function ver() {
+    var doc = $('inDocumento').value.trim();
+    var cod = $('inCodigo').value.trim();
+    error('');
+    if (doc.length < 5) { error('Escribe tu número de documento completo.'); return; }
+    if (!/^\d{6}$/.test(cod)) { error('El código de asistencia debe tener 6 dígitos.'); return; }
+
+    var b = $('btnVer');
+    b.disabled = true;
+    b.textContent = 'Buscando…';
+
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ accion: 'miCredencial', documento: doc, codigo: cod }),
+      redirect: 'follow'
+    }).then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res.ok) { error(res.error || 'No se pudo consultar. Intenta de nuevo.'); return; }
+        var d = res.datos;
+        location.href = 'credencial.html#t=' + encodeURIComponent(d.token) +
+          '&c=' + encodeURIComponent(d.codigo) + '&i=' + encodeURIComponent(d.id);
+      })
+      .catch(function () { error('Sin conexión. Revisa tu internet e intenta de nuevo.'); })
+      .then(function () { b.disabled = false; b.textContent = 'Ver mi código QR'; });
+  }
+})();
+</script>
+</body>
+</html>
