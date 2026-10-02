@@ -5,8 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#14263F">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Asistencia">
   <title>Control de Asistencia</title>
-  <link rel="stylesheet" href="estilos.css?v=11">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="estilos.css?v=12">
 </head>
 <body>
 
@@ -46,6 +52,10 @@
       <button id="btnMenu" class="btn-icono" aria-label="Opciones">⋯</button>
     </header>
 
+    <div id="avisoConexion" class="aviso-conexion" role="alert" hidden>
+      Sin conexión a internet. Los registros no se guardan hasta que vuelva la señal.
+    </div>
+
     <div id="jornada" class="jornada">
       <div class="jornada-etq">Jornada actual</div>
       <div id="jornadaTexto" class="jornada-texto">Consultando…</div>
@@ -57,6 +67,10 @@
     <div class="visor">
       <video id="video" playsinline muted autoplay></video>
       <div class="marco"></div>
+      <div class="visor-controles">
+        <button id="btnLinterna" class="btn-visor" aria-label="Linterna" aria-pressed="false" hidden>🔦</button>
+        <button id="btnGirar" class="btn-visor" aria-label="Cambiar de cámara" hidden>⟲</button>
+      </div>
       <div id="visorMensaje" class="visor-mensaje" hidden>
         <p id="visorTexto"></p>
         <button id="btnCamara" class="btn btn-primario">Activar cámara</button>
@@ -165,8 +179,8 @@
   </section>
 
   <!-- Resultado del escaneo -->
-  <div id="resultado" class="resultado" hidden>
-    <div id="resIcono" class="resultado-icono"></div>
+  <div id="resultado" class="resultado" role="status" aria-live="assertive" hidden>
+    <div id="resIcono" class="resultado-icono" aria-hidden="true"></div>
     <div id="resTitulo" class="resultado-titulo"></div>
     <div id="resNombre" class="resultado-nombre"></div>
     <div id="resDetalle" class="resultado-detalle"></div>
@@ -229,12 +243,12 @@
   </div>
 
   <!-- Avisos breves -->
-  <div id="panelToast" class="toast" hidden></div>
+  <div id="panelToast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <!-- jsQR (Apache 2.0) -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-  <script src="app.js?v=11"></script>
-  <script src="admin.js?v=11"></script>
-  <script src="reportes.js?v=11"></script>
+  <script src="app.js?v=12"></script>
+  <script src="admin.js?v=12"></script>
+  <script src="reportes.js?v=12"></script>
 </body>
 </html>
