@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Prueba de cámara — Control de Asistencia</title>
+  <style>
+    :root {
+      --azul: #1F3A5F; --verde: #1E6B3A; --verde-bg: #D9F2E3;
+      --ambar: #8A5A00; --ambar-bg: #FFF1CC; --rojo: #9B1C1C; --rojo-bg: #FBDADA;
+      --gris: #5B6470; --borde: #E2E6EB; --fondo: #F4F6F8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--fondo); color: #1B2430;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 16px; line-height: 1.4;
+    }
+    main { max-width: 520px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 22px; margin: 4px 0 0; color: var(--azul); }
+    .sub { margin: 2px 0 16px; color: var(--gris); font-size: 14px; }
+    .card {
+      background: #fff; border: 1px solid var(--borde); border-radius: 12px;
+      padding: 16px; margin-bottom: 14px;
+    }
+    h2 { font-size: 16px; margin: 0 0 10px; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { padding: 4px 0; font-size: 15px; }
+    li.ok { color: var(--verde); }
+    li.no { color: var(--rojo); font-weight: 600; }
+    li.info { color: var(--gris); font-size: 13px; }
+    .visor {
+      position: relative; width: 100%; aspect-ratio: 1 / 1; background: #0F1720;
+      border-radius: 10px; overflow: hidden; margin-bottom: 12px;
+    }
+    .visor video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .marco {
+      position: absolute; inset: 18%; border: 3px solid rgba(255,255,255,.85);
+      border-radius: 14px; pointer-events: none;
+    }
+    .resultado {
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+      font-weight: 600; word-break: break-word;
+    }
+    .neutro { background: #EEF1F4; color: var(--gris); }
+    .ok { background: var(--verde-bg); color: var(--verde); }
+    .aviso { background: var(--ambar-bg); color: var(--ambar); }
+    .error { background: var(--rojo-bg); color: var(--rojo); }
+    .btn {
+      width: 100%; min-height: 52px; border-radius: 10px; border: 1px solid var(--azul);
+      background: #fff; color: var(--azul); font-size: 17px; font-weight: 700; cursor: pointer;
+    }
+    .btn.primario { background: var(--azul); color: #fff; }
+    .btn:disabled { opacity: .5; }
+    .qr { text-align: center; }
+    .qr svg { width: 220px; height: 220px; }
+    .qr p { font-family: ui-monospace, Menlo, monospace; color: var(--gris); margin: 6px 0 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Prueba de cámara</h1>
+  <p class="sub">Fase 3A · Plan B (GitHub Pages)</p>
+
+  <section class="card">
+    <h2>1. Diagnóstico del navegador</h2>
+    <ul id="diag"></ul>
+  </section>
+
+  <section class="card">
+    <h2>2. Cámara y lectura de QR</h2>
+    <div class="visor">
+      <video id="video" playsinline muted autoplay></video>
+      <div class="marco"></div>
+    </div>
+    <div id="resultado" class="resultado neutro">Cámara apagada</div>
+    <button id="btnCamara" class="btn primario">Iniciar cámara</button>
+  </section>
+
+  <section class="card">
+    <h2>3. Conexión con el servidor</h2>
+    <div id="conexion" class="resultado neutro">Sin probar</div>
+    <button id="btnPing" class="btn">Probar conexión (5 veces)</button>
+  </section>
+
+  <section class="card">
+    <h2>4. QR de prueba</h2>
+    <p class="sub">Abre esta misma página en un computador y escanea este código con el celular.</p>
+    <div id="qr" class="qr"></div>
+  </section>
+</main>
+
+<!-- Bibliotecas open source: jsQR (Apache 2.0) y qrcode-generator (MIT) -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+
+<script>
+(function () {
+  // ▼▼▼ Pega aquí la URL /exec de tu Apps Script (entre las comillas) ▼▼▼
+  var API_URL = 'https://script.google.com/macros/s/AKfycbxzpWegyhyATIMuH6cvbR8hWYy8ORv6AyCkK0iAALBjLvRHj8Vh5fDqAg5AJ3myQwQl4w/exec';
+  // ▲▲▲
+
+  var PREFIJO = 'EVT1:';
+  var QR_PRUEBA = 'EVT1:PRUEBA2345';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var stream = null, activo = false, audioCtx = null;
+  var ultimo = '', ultimoT = 0;
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  /* ---------- Diagnóstico ---------- */
+  function diagnostico() {
+    var lista = $('diag');
+    var urlOk = API_URL.indexOf('https://script.google.com/') === 0;
+    var items = [
+      ['Conexión segura (HTTPS)', window.isSecureContext ? 'ok' : 'no'],
+      ['API de cámara disponible', (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? 'ok' : 'no'],
+      ['Lector de QR (jsQR) cargado', typeof jsQR === 'function' ? 'ok' : 'no'],
+      ['Generador de QR cargado', typeof qrcode === 'function' ? 'ok' : 'no'],
+      ['URL del servidor configurada', urlOk ? 'ok' : 'no'],
+      ['Vibración', ('vibrate' in navigator) ? 'ok' : 'info']
+    ];
+    items.forEach(function (it) {
+      var li = document.createElement('li');
+      li.className = it[1];
+      if (it[1] === 'ok') li.textContent = '✓ ' + it[0];
+      else if (it[1] === 'no') li.textContent = '✕ ' + it[0];
+      else li.textContent = '– ' + it[0] + ': no disponible (normal en iPhone)';
+      lista.appendChild(li);
+    });
+    var ua = document.createElement('li');
+    ua.className = 'info';
+    ua.textContent = navigator.userAgent;
+    lista.appendChild(ua);
+  }
+
+  function mostrar(idCaja, clase, texto) {
+    var caja = $(idCaja);
+    caja.className = 'resultado ' + clase;
+    caja.textContent = texto;
+  }
+
+  /* ---------- Sonido ---------- */
+  function prepararAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { audioCtx = null; }
+  }
+
+  function pitido(frecuencia) {
+    if (!audioCtx) return;
+    try {
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = frecuencia;
+      g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start();
+      o.stop(audioCtx.currentTime + 0.16);
+    } catch (e) {}
+  }
+
+  /* ---------- Cámara ---------- */
+  function mensajeError(err) {
+    var nombre = (err && err.name) || 'Error';
+    var detalle = ' [' + nombre + (err && err.message ? ': ' + err.message : '') + ']';
+    switch (nombre) {
+      case 'NotAllowedError':
+      case 'SecurityError':
+        return '✕ El navegador no dio permiso para usar la cámara. Revisa que hayas pulsado "Permitir".' + detalle;
+      case 'NotFoundError':
+      case 'OverconstrainedError':
+        return '✕ No se encontró una cámara disponible en este dispositivo.' + detalle;
+      case 'NotReadableError':
+        return '✕ La cámara está siendo usada por otra aplicación. Ciérrala e intenta de nuevo.' + detalle;
+      default:
+        return '✕ No se pudo iniciar la cámara.' + detalle;
+    }
+  }
+
+  function iniciarCamara() {
+    if (activo) { detenerCamara(); return; }
+    prepararAudio();
+
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+      mostrar('resultado', 'error', '✕ Este navegador no permite usar la cámara desde esta página.');
+      return;
+    }
+
+    mostrar('resultado', 'neutro', 'Solicitando permiso de cámara…');
+    navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    }).then(function (s) {
+      stream = s;
+      var v = $('video');
+      v.srcObject = stream;
+      return v.play();
+    }).then(function () {
+      activo = true;
+      $('btnCamara').textContent = 'Detener cámara';
+      mostrar('resultado', 'neutro', 'Apunta la cámara a un código QR');
+      escanear();
+    }).catch(function (err) {
+      detenerCamara();
+      mostrar('resultado', 'error', mensajeError(err));
+    });
+  }
+
+  function detenerCamara() {
+    activo = false;
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    stream = null;
+    $('video').srcObject = null;
+    $('btnCamara').textContent = 'Iniciar cámara';
+  }
+
+  function escanear() {
+    if (!activo) return;
+    var v = $('video');
+    if (v.readyState >= 2 && v.videoWidth) {
+      var escala = Math.min(1, 640 / v.videoWidth);
+      var w = Math.round(v.videoWidth * escala);
+      var h = Math.round(v.videoHeight * escala);
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      ctx.drawImage(v, 0, 0, w, h);
+      var img = ctx.getImageData(0, 0, w, h);
+      var codigo = jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+      if (codigo && codigo.data) detectado(codigo.data);
+    }
+    setTimeout(function () { requestAnimationFrame(escanear); }, 120);
+  }
+
+  function detectado(texto) {
+    var ahora = Date.now();
+    if (texto === ultimo && ahora - ultimoT < 2500) return;
+    ultimo = texto; ultimoT = ahora;
+
+    var delSistema = texto.indexOf(PREFIJO) === 0;
+    if (delSistema) {
+      mostrar('resultado', 'ok', '✓ QR del sistema leído: ' + texto.slice(0, 60));
+      pitido(880);
+      if (navigator.vibrate) navigator.vibrate(80);
+    } else {
+      mostrar('resultado', 'aviso', '⚠ Se leyó un QR, pero no es del sistema: ' + texto.slice(0, 60));
+      pitido(440);
+      if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+    }
+  }
+
+  /* ---------- Conexión con Apps Script ---------- */
+  function llamarServidor(datos) {
+    // text/plain evita la verificación previa (CORS) que Apps Script no admite
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(datos),
+      redirect: 'follow'
+    }).then(function (r) {
+      if (!r.ok) throw new Error('El servidor respondió con código ' + r.status);
+      return r.json();
+    });
+  }
+
+  function probarConexion() {
+    if (API_URL.indexOf('https://script.google.com/') !== 0) {
+      mostrar('conexion', 'error', '✕ Falta configurar la URL del servidor en el código (API_URL).');
+      return;
+    }
+    var tiempos = [];
+    $('btnPing').disabled = true;
+    mostrar('conexion', 'neutro', 'Probando…');
+
+    function una() {
+      var t0 = performance.now();
+      llamarServidor({ accion: 'ping' }).then(function (res) {
+        if (!res || !res.ok) throw new Error((res && res.error) || 'Respuesta inesperada');
+        tiempos.push(Math.round(performance.now() - t0));
+        if (tiempos.length < 5) una(); else fin();
+      }).catch(function (err) {
+        mostrar('conexion', 'error',
+          '✕ No se pudo conectar con el servidor. Revisa que la Web App esté publicada para "Cualquier usuario" y que la URL termine en /exec. [' +
+          ((err && err.message) || err) + ']');
+        $('btnPing').disabled = false;
+      });
+    }
+
+    function fin() {
+      var suma = tiempos.reduce(function (a, b) { return a + b; }, 0);
+      var prom = Math.round(suma / tiempos.length);
+      mostrar('conexion', prom < 2000 ? 'ok' : 'aviso',
+        '✓ El servidor respondió. Promedio: ' + prom + ' ms (' + tiempos.join(', ') + ')');
+      $('btnPing').disabled = false;
+    }
+
+    una();
+  }
+
+  /* ---------- QR de prueba ---------- */
+  function dibujarQR() {
+    if (typeof qrcode !== 'function') {
+      $('qr').textContent = 'No se pudo cargar el generador de QR.';
+      return;
+    }
+    var qr = qrcode(0, 'M');
+    qr.addData(QR_PRUEBA);
+    qr.make();
+    $('qr').innerHTML = qr.createSvgTag(6, 4);
+    var p = document.createElement('p');
+    p.textContent = QR_PRUEBA;
+    $('qr').appendChild(p);
+  }
+
+  $('btnCamara').addEventListener('click', iniciarCamara);
+  $('btnPing').addEventListener('click', probarConexion);
+  diagnostico();
+  dibujarQR();
+})();
+</script>
+</body>
+</html>
