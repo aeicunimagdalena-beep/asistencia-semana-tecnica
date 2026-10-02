@@ -1,6 +1,8 @@
 /* ============================================================
  *  Control de Asistencia — app.js
  *  Escáner + ingreso + navegación al panel de administración
+ *  Fase 9: linterna, cambio de cámara, aviso de conexión,
+ *          lector USB/Bluetooth y accesibilidad
  * ============================================================ */
 (function () {
   'use strict';
@@ -16,12 +18,15 @@
   var TIMEOUT_MS = 15000;
   var INTERVALO_ESTADO_MS = 30000;
   var PAUSA_MISMO_QR_MS = 3000;
+  var RETARDO_PROCESANDO_MS = 350;   // "Registrando…" solo si tarda más que esto
+  var LECTOR_MAX_ENTRE_TECLAS = 120; // ms: un lector USB "teclea" mucho más rápido que una persona
 
   var LS = {
     sesion: 'asis.sesion',
     dispositivo: 'asis.dispositivo',
     sonido: 'asis.sonido',
-    contador: 'asis.contador'
+    contador: 'asis.contador',
+    camara: 'asis.camara'
   };
 
   var VISTAS = ['vistaCarga', 'vistaIngreso', 'vistaEscaner', 'vistaPanel'];
@@ -32,10 +37,12 @@
     sesion: null, rol: null, dispositivo: '',
     jornada: null, proxima: null,
     ocupado: false, modal: false, enPanel: false,
-    camara: false, stream: null, reanudar: false,
+    camara: false, stream: null, track: null, reanudar: false,
+    camaraModo: 'environment', linterna: false,
     ultimo: '', ultimoT: 0,
     sonido: true, audio: null, wake: null,
-    intervalo: null, timerResultado: null, accionVisor: null
+    intervalo: null, timerResultado: null, timerProcesando: null, accionVisor: null,
+    buffer: '', bufferT: 0
   };
 
   var lienzo = document.createElement('canvas');
@@ -89,6 +96,10 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  function conexion(ok) {
+    $('avisoConexion').hidden = !!ok;
+  }
+
   /* ===== Comunicación con el servidor ===== */
   function fallo(codigo, texto) {
     var e = new Error(texto);
@@ -134,6 +145,7 @@
   /* ===== Inicio ===== */
   function iniciar() {
     st.sonido = leer(LS.sonido) !== 'no';
+    st.camaraModo = leer(LS.camara) === 'user' ? 'user' : 'environment';
     pintarSonido();
     $('inDispositivo').value = leer(LS.dispositivo) || '';
     pintarContador();
@@ -223,10 +235,11 @@
     clearInterval(st.intervalo);
     detenerCamara();
     cerrarResultado();
-    $('procesando').hidden = true;
+    ocultarProcesando();
     $('modalMenu').hidden = true;
     $('modalCodigo').hidden = true;
     st.modal = false;
+    conexion(true);
     mostrarVista('vistaIngreso');
     if (msg) mensaje('ingresoMensaje', 'info', msg);
   }
@@ -248,10 +261,12 @@
   function actualizarEstado() {
     if (!st.sesion) return;
     api('estadoEscaner').then(function (d) {
+      conexion(true);
       st.proxima = d.proxima;
       pintarJornada(d.jornada);
     }).catch(function (e) {
-      if (e.codigo === 'SESION') salir(e.message);
+      if (e.codigo === 'SESION') { salir(e.message); return; }
+      if (e.codigo === 'RED') conexion(false);
     });
   }
 
@@ -303,7 +318,7 @@
     visor('Activando cámara…', null);
     navigator.mediaDevices.getUserMedia({
       audio: false,
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      video: { facingMode: { ideal: st.camaraModo }, width: { ideal: 1280 }, height: { ideal: 720 } }
     }).then(function (s) {
       if (st.enPanel) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
       st.stream = s;
@@ -312,6 +327,7 @@
       return v.play().then(function () {
         st.camara = true;
         visor(null);
+        configurarControlesCamara();
         mantenerPantalla();
         bucle();
       });
@@ -321,21 +337,68 @@
     });
   }
 
+  function configurarControlesCamara() {
+    st.track = st.stream ? st.stream.getVideoTracks()[0] : null;
+    var caps = {};
+    try { caps = (st.track && st.track.getCapabilities) ? st.track.getCapabilities() : {}; } catch (e) { caps = {}; }
+
+    st.linterna = false;
+    $('btnLinterna').hidden = !caps.torch;
+    pintarLinterna();
+
+    $('video').classList.toggle('espejo', st.camaraModo === 'user');
+
+    if (navigator.mediaDevices.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then(function (ds) {
+        var n = ds.filter(function (d) { return d.kind === 'videoinput'; }).length;
+        $('btnGirar').hidden = n < 2;
+      }).catch(function () {});
+    }
+  }
+
   function detenerCamara() {
     st.camara = false;
     if (st.stream) st.stream.getTracks().forEach(function (t) { t.stop(); });
     st.stream = null;
+    st.track = null;
+    st.linterna = false;
     $('video').srcObject = null;
+    $('btnLinterna').hidden = true;
+    $('btnGirar').hidden = true;
     if (st.wake) { try { st.wake.release(); } catch (e) {} st.wake = null; }
+  }
+
+  function alternarLinterna() {
+    if (!st.track) return;
+    var nuevo = !st.linterna;
+    st.track.applyConstraints({ advanced: [{ torch: nuevo }] }).then(function () {
+      st.linterna = nuevo;
+      pintarLinterna();
+    }).catch(function () {
+      $('btnLinterna').hidden = true;
+    });
+  }
+
+  function pintarLinterna() {
+    var b = $('btnLinterna');
+    b.classList.toggle('encendido', st.linterna);
+    b.setAttribute('aria-pressed', st.linterna ? 'true' : 'false');
+  }
+
+  function girarCamara() {
+    st.camaraModo = st.camaraModo === 'user' ? 'environment' : 'user';
+    guardar(LS.camara, st.camaraModo);
+    detenerCamara();
+    iniciarCamara();
   }
 
   function bucle() {
     if (!st.camara) return;
     var v = $('video');
     if (!st.ocupado && !st.modal && v.readyState >= 2 && v.videoWidth) {
-      var esc2 = Math.min(1, 640 / v.videoWidth);
-      var w = Math.round(v.videoWidth * esc2);
-      var h = Math.round(v.videoHeight * esc2);
+      var escala = Math.min(1, 640 / v.videoWidth);
+      var w = Math.round(v.videoWidth * escala);
+      var h = Math.round(v.videoHeight * escala);
       if (lienzo.width !== w || lienzo.height !== h) { lienzo.width = w; lienzo.height = h; }
       ctx.drawImage(v, 0, 0, w, h);
       var c = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
@@ -355,6 +418,30 @@
     } catch (e) {}
   }
 
+  /* ===== Lector USB / Bluetooth (funciona como teclado) ===== */
+  function teclaLector(e) {
+    if ($('vistaEscaner').hidden || st.modal || st.ocupado) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+
+    var ahora = Date.now();
+    if (ahora - st.bufferT > LECTOR_MAX_ENTRE_TECLAS) st.buffer = '';
+    st.bufferT = ahora;
+
+    if (e.key === 'Enter') {
+      var texto = st.buffer.trim().toUpperCase();
+      st.buffer = '';
+      if (texto.length < 6) return;
+      e.preventDefault();
+      // Tolera lectores con distribución de teclado distinta (":" puede llegar como "Ñ", ";", etc.)
+      var m = texto.match(/EVT1.?([A-Z0-9]{10})$/);
+      prepararAudio();
+      leido(m ? PREFIJO_QR + m[1] : texto);
+      return;
+    }
+    if (e.key && e.key.length === 1) st.buffer += e.key;
+  }
+
   /* ===== Escaneo y resultado ===== */
   function leido(texto) {
     var ahora = Date.now();
@@ -369,20 +456,32 @@
     procesar({ qr: texto });
   }
 
+  function mostrarProcesando() {
+    clearTimeout(st.timerProcesando);
+    st.timerProcesando = setTimeout(function () { $('procesando').hidden = false; }, RETARDO_PROCESANDO_MS);
+  }
+
+  function ocultarProcesando() {
+    clearTimeout(st.timerProcesando);
+    $('procesando').hidden = true;
+  }
+
   function procesar(datos) {
     if (st.ocupado) return;
     st.ocupado = true;
-    $('procesando').hidden = false;
+    mostrarProcesando();
     datos.plataforma = PLATAFORMA;
 
     api(ACCION_ESCANEO, datos).then(function (r) {
-      $('procesando').hidden = true;
+      ocultarProcesando();
+      conexion(true);
       if (Object.prototype.hasOwnProperty.call(r, 'jornada')) pintarJornada(r.jornada);
       if (r.estado === 'REGISTRADO') sumarContador();
       resultado(r);
     }).catch(function (e) {
-      $('procesando').hidden = true;
+      ocultarProcesando();
       if (e.codigo === 'SESION') { st.ocupado = false; salir(e.message); return; }
+      if (e.codigo === 'RED') conexion(false);
       resultado({ estado: 'ERROR', mensaje: e.message });
     });
   }
@@ -523,6 +622,8 @@
     $('btnCamara').addEventListener('click', function () {
       if (st.accionVisor) st.accionVisor(); else iniciarCamara();
     });
+    $('btnLinterna').addEventListener('click', alternarLinterna);
+    $('btnGirar').addEventListener('click', girarCamara);
 
     $('btnCodigo').addEventListener('click', abrirCodigo);
     $('btnCodigoCancelar').addEventListener('click', cerrarCodigo);
@@ -553,6 +654,11 @@
 
     $('resultado').addEventListener('click', cerrarResultado);
 
+    document.addEventListener('keydown', teclaLector);
+
+    window.addEventListener('offline', function () { conexion(false); });
+    window.addEventListener('online', function () { actualizarEstado(); });
+
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) {
         if (st.camara) { st.reanudar = true; detenerCamara(); }
@@ -564,7 +670,7 @@
     });
   }
 
-  /* ===== Funciones compartidas con admin.js ===== */
+  /* ===== Funciones compartidas con admin.js y reportes.js ===== */
   window.Asistencia = {
     api: api,
     $: $,
@@ -574,7 +680,7 @@
     pausarEscaner: pausarEscaner,
     reanudarEscaner: reanudarEscaner,
     rol: function () { return st.rol; },
-    panel: null // lo registra admin.js
+    panel: null
   };
 
   iniciar();
